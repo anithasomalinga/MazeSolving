@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🌟 Maze Adventure!</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: linear-gradient(155deg, #4f46e5 0%, #7c3aed 45%, #c026d3 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px 48px;
+      font-family: 'Nunito', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ── TITLE ── */
+    .title {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(2em, 7vw, 3.6em);
+      color: #fff;
+      text-shadow: 0 4px 12px rgba(0,0,0,0.25), 0 2px 0 rgba(0,0,0,0.2);
+      margin-bottom: 18px;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+
+    /* ── CONTROLS ── */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 22px;
+    }
+
+    .btn {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: clamp(0.78em, 2.4vw, 1em);
+      padding: 10px 22px;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+      user-select: none;
+      -webkit-user-select: none;
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+    }
+    .btn:hover  { filter: brightness(1.06); }
+    .btn:active { transform: translateY(3px); }
+
+    .btn-diff {
+      background: rgba(255,255,255,0.92);
+      color: #5b21b6;
+      box-shadow: 0 5px 0 rgba(0,0,0,0.18);
+    }
+    .btn-diff:active { box-shadow: 0 2px 0 rgba(0,0,0,0.18); }
+
+    .btn-diff.active {
+      background: #fbbf24;
+      color: #fff;
+      box-shadow: 0 5px 0 #b45309;
+    }
+    .btn-diff.active:active { box-shadow: 0 2px 0 #b45309; }
+
+    .btn-new {
+      background: #22c55e;
+      color: #fff;
+      box-shadow: 0 5px 0 #15803d;
+    }
+    .btn-new:active { box-shadow: 0 2px 0 #15803d; }
+
+    .btn-clear {
+      background: #fb923c;
+      color: #fff;
+      box-shadow: 0 5px 0 #c2410c;
+    }
+    .btn-clear:active { box-shadow: 0 2px 0 #c2410c; }
+
+    /* ── MAZE CARD ── */
+    .maze-card {
+      background: #fff;
+      border-radius: 24px;
+      padding: 18px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.35), 0 0 0 5px rgba(255,255,255,0.18);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      max-width: calc(100vw - 32px);
+    }
+
+    #mazeCanvas {
+      display: block;
+      border-radius: 10px;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    /* ── LEGEND ── */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      justify-content: center;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82em;
+      font-weight: 700;
+      color: #555;
+    }
+    .swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      flex-shrink: 0;
+    }
+
+    .hint {
+      font-size: 0.82em;
+      color: #888;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    /* ── WIN OVERLAY ── */
+    #winOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(79, 46, 179, 0.55);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    #winOverlay.show { display: flex; }
+
+    .win-box {
+      background: #fff;
+      border-radius: 28px;
+      padding: 44px 52px;
+      text-align: center;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+      animation: pop-in 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.4) both;
+      max-width: min(92vw, 420px);
+    }
+    @keyframes pop-in {
+      from { transform: scale(0.15) rotate(-8deg); opacity: 0; }
+      to   { transform: scale(1)    rotate(0deg);  opacity: 1; }
+    }
+
+    .win-box .stars {
+      font-size: 2.4em;
+      margin-bottom: 10px;
+      animation: spin-in 0.6s 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.4) both;
+    }
+    @keyframes spin-in {
+      from { transform: rotate(-180deg) scale(0); opacity: 0; }
+      to   { transform: rotate(0deg)   scale(1); opacity: 1; }
+    }
+
+    .win-box h2 {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(1.8em, 5vw, 2.8em);
+      color: #7c3aed;
+      margin-bottom: 6px;
+    }
+    .win-box p {
+      font-size: 1.08em;
+      color: #777;
+      font-weight: 700;
+      margin-bottom: 28px;
+    }
+    .win-box .btn {
+      background: #7c3aed;
+      color: #fff;
+      box-shadow: 0 5px 0 #5b21b6;
+      font-size: 1.05em;
+      padding: 13px 38px;
+    }
+    .win-box .btn:active { box-shadow: 0 2px 0 #5b21b6; }
+
+    /* ── CONFETTI CANVAS ── */
+    #confettiCanvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 199;
+    }
+  </style>
+</head>
+<body>
+
+<h1 class="title">🌟 Maze Adventure!</h1>
+
+<div class="controls">
+  <button class="btn btn-diff active" data-level="easy">🐣 Easy</button>
+  <button class="btn btn-diff"        data-level="medium">🦊 Medium</button>
+  <button class="btn btn-diff"        data-level="hard">🐉 Hard</button>
+  <button class="btn btn-new"  id="newMazeBtn">🎲 New Maze</button>
+  <button class="btn btn-clear" id="clearBtn">🧹 Clear</button>
+</div>
+
+<div class="maze-card">
+  <canvas id="mazeCanvas"></canvas>
+  <div class="legend">
+    <div class="legend-item">
+      <div class="swatch" style="background:#4ade80;"></div> Start (S)
+    </div>
+    <div class="legend-item">
+      <div class="swatch" style="background:#fbbf24;"></div> Finish (F)
+    </div>
+    <div class="legend-item">
+      <div class="swatch" style="background:rgba(99,179,237,0.75);"></div> Your path
+    </div>
+  </div>
+  <p class="hint">Click &amp; drag from <strong>S</strong> to find the way to <strong>F</strong>!</p>
+</div>
+
+<canvas id="confettiCanvas"></canvas>
+
+<div id="winOverlay">
+  <div class="win-box">
+    <div class="stars">🌟⭐🌟</div>
+    <h2>You did it!</h2>
+    <p>Amazing maze solver! 🎉</p>
+    <button class="btn" id="nextMazeBtn">🎲 Play Again!</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════
+   CONFIGURATION
+═══════════════════════════════════════════ */
+const LEVELS = {
+  easy:   { rows:  9, cols:  9 },
+  medium: { rows: 13, cols: 13 },
+  hard:   { rows: 19, cols: 19 },
+};
+
+const PALETTE = {
+  bg:         '#fdf6ff',
+  wall:       '#2d1f6e',
+  start:      '#4ade80',
+  startDark:  '#16a34a',
+  finish:     '#fbbf24',
+  finishDark: '#b45309',
+  pathFill:   'rgba(99, 179, 237, 0.40)',
+  pathLine:   'rgba(49, 130, 206, 0.65)',
+  label:      '#ffffff',
+};
+
+const CONFETTI_COLORS = [
+  '#f87171','#fb923c','#fbbf24','#a3e635',
+  '#34d399','#38bdf8','#a78bfa','#f472b6',
+];
+
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+let currentLevel = 'easy';
+let grid         = [];   // grid[row][col] = { walls: {top,right,bottom,left} }
+let path         = [];   // [{row,col}, ...]
+let isDrawing    = false;
+let won          = false;
+let cellSize     = 40;
+
+/* ═══════════════════════════════════════════
+   DOM REFS
+═══════════════════════════════════════════ */
+const mazeCanvas     = document.getElementById('mazeCanvas');
+const ctx            = mazeCanvas.getContext('2d');
+const confettiCanvas = document.getElementById('confettiCanvas');
+const cctx           = confettiCanvas.getContext('2d');
+const winOverlay     = document.getElementById('winOverlay');
+
+/* ═══════════════════════════════════════════
+   MAZE GENERATION — Iterative DFS (recursive backtracker)
+═══════════════════════════════════════════ */
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+const DIRS = [
+  { dr: -1, dc:  0, wall: 'top',    opp: 'bottom' },
+  { dr:  1, dc:  0, wall: 'bottom', opp: 'top'    },
+  { dr:  0, dc: -1, wall: 'left',   opp: 'right'  },
+  { dr:  0, dc:  1, wall: 'right',  opp: 'left'   },
+];
+
+function generateMaze(rows, cols) {
+  // Initialise every cell with all four walls intact
+  const g = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => ({
+      walls: { top: true, right: true, bottom: true, left: true },
+    }))
+  );
+
+  // Mark visited separately (avoids mutating the cell objects above)
+  const visited = Array.from({ length: rows }, () => new Uint8Array(cols));
+
+  const stack = [{ r: 0, c: 0 }];
+  visited[0][0] = 1;
+
+  while (stack.length > 0) {
+    const cur  = stack[stack.length - 1];
+    const dirs = shuffle(DIRS.slice());
+
+    let moved = false;
+    for (const d of dirs) {
+      const nr = cur.r + d.dr;
+      const nc = cur.c + d.dc;
+      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !visited[nr][nc]) {
+        // Carve passage
+        g[cur.r][cur.c].walls[d.wall] = false;
+        g[nr][nc].walls[d.opp]        = false;
+        visited[nr][nc] = 1;
+        stack.push({ r: nr, c: nc });
+        moved = true;
+        break;
+      }
+    }
+    if (!moved) stack.pop();
+  }
+
+  return g;
+}
+
+/* ═══════════════════════════════════════════
+   CANVAS SIZING
+═══════════════════════════════════════════ */
+function computeCellSize() {
+  const { cols } = LEVELS[currentLevel];
+  // Available width: viewport minus body padding (32px) minus card padding (36px) minus safety margin
+  const available = Math.min(window.innerWidth - 80, 580);
+  cellSize = Math.max(Math.floor(available / cols), 22);
+}
+
+function resizeCanvas() {
+  const { rows, cols } = LEVELS[currentLevel];
+  computeCellSize();
+  mazeCanvas.width  = cols * cellSize;
+  mazeCanvas.height = rows * cellSize;
+  confettiCanvas.width  = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+}
+
+/* ═══════════════════════════════════════════
+   DRAWING HELPERS
+═══════════════════════════════════════════ */
+function fillRoundRect(context, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  context.beginPath();
+  context.moveTo(x + r, y);
+  context.arcTo(x + w, y,     x + w, y + h, r);
+  context.arcTo(x + w, y + h, x,     y + h, r);
+  context.arcTo(x,     y + h, x,     y,     r);
+  context.arcTo(x,     y,     x + w, y,     r);
+  context.closePath();
+  context.fill();
+}
+
+function drawCell(x, y, color, pad) {
+  const r = Math.max(3, cellSize * 0.22);
+  ctx.fillStyle = color;
+  fillRoundRect(ctx, x + pad, y + pad, cellSize - pad * 2, cellSize - pad * 2, r);
+}
+
+/* ═══════════════════════════════════════════
+   MAIN DRAW
+═══════════════════════════════════════════ */
+function drawMaze() {
+  const { rows, cols } = LEVELS[currentLevel];
+  const cs = cellSize;
+
+  /* 1 ── canvas background */
+  ctx.fillStyle = PALETTE.bg;
+  ctx.fillRect(0, 0, mazeCanvas.width, mazeCanvas.height);
+
+  /* 2 ── path: thick line through cell centres (drawn BELOW walls) */
+  if (path.length >= 2) {
+    ctx.save();
+    ctx.strokeStyle = PALETTE.pathLine;
+    ctx.lineWidth   = cs * 0.48;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.beginPath();
+    ctx.moveTo(path[0].col * cs + cs / 2, path[0].row * cs + cs / 2);
+    for (let i = 1; i < path.length; i++) {
+      ctx.lineTo(path[i].col * cs + cs / 2, path[i].row * cs + cs / 2);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* 3 ── path: cell highlight fills */
+  ctx.fillStyle = PALETTE.pathFill;
+  for (const { row, col } of path) {
+    ctx.fillRect(col * cs + 1, row * cs + 1, cs - 2, cs - 2);
+  }
+
+  /* 4 ── start cell */
+  drawCell(0, 0, PALETTE.start, 3);
+
+  /* 5 ── finish cell */
+  drawCell((cols - 1) * cs, (rows - 1) * cs, PALETTE.finish, 3);
+
+  /* 6 ── S / F labels */
+  const fs = Math.max(Math.floor(cs * 0.46), 11);
+  ctx.font         = `bold ${fs}px 'Fredoka One', cursive`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+
+  // S label — dark shadow for legibility
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillText('S', cs * 0.5 + 1, cs * 0.5 + 1);
+  ctx.fillStyle = PALETTE.label;
+  ctx.fillText('S', cs * 0.5, cs * 0.5);
+
+  // F label
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillText('F', (cols - 0.5) * cs + 1, (rows - 0.5) * cs + 1);
+  ctx.fillStyle = PALETTE.label;
+  ctx.fillText('F', (cols - 0.5) * cs, (rows - 0.5) * cs);
+
+  /* 7 ── walls (drawn on top of everything) */
+  const wallW = Math.max(2, Math.round(cs * 0.09));
+  ctx.strokeStyle = PALETTE.wall;
+  ctx.lineWidth   = wallW;
+  ctx.lineCap     = 'butt';
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const { walls } = grid[r][c];
+      const x = c * cs;
+      const y = r * cs;
+
+      ctx.beginPath();
+      if (walls.top)    { ctx.moveTo(x,      y);      ctx.lineTo(x + cs, y);      }
+      if (walls.right)  { ctx.moveTo(x + cs, y);      ctx.lineTo(x + cs, y + cs); }
+      if (walls.bottom) { ctx.moveTo(x,      y + cs); ctx.lineTo(x + cs, y + cs); }
+      if (walls.left)   { ctx.moveTo(x,      y);      ctx.lineTo(x,      y + cs); }
+      ctx.stroke();
+    }
+  }
+
+  /* 8 ── highlight current position (last path cell) */
+  if (path.length > 0 && !won) {
+    const { row, col } = path[path.length - 1];
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    const pad = Math.max(2, cs * 0.18);
+    const r   = Math.max(3, cs * 0.22);
+    ctx.beginPath();
+    fillRoundRect(ctx, col * cs + pad, row * cs + pad, cs - pad * 2, cs - pad * 2, r);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   PATH LOGIC
+═══════════════════════════════════════════ */
+function pixelToCell(x, y) {
+  const { rows, cols } = LEVELS[currentLevel];
+  const col = Math.floor(x / cellSize);
+  const row = Math.floor(y / cellSize);
+  if (row < 0 || row >= rows || col < 0 || col >= cols) return null;
+  return { row, col };
+}
+
+/** Returns true if there is no wall between adjacent cells (r1,c1)→(r2,c2). */
+function canPass(r1, c1, r2, c2) {
+  const dr = r2 - r1, dc = c2 - c1;
+  if (Math.abs(dr) + Math.abs(dc) !== 1) return false;
+  if (dr === -1) return !grid[r1][c1].walls.top;
+  if (dr ===  1) return !grid[r1][c1].walls.bottom;
+  if (dc === -1) return !grid[r1][c1].walls.left;
+  if (dc ===  1) return !grid[r1][c1].walls.right;
+  return false;
+}
+
+function getEventPos(e) {
+  const rect   = mazeCanvas.getBoundingClientRect();
+  // Account for any CSS scaling (canvas internal size vs displayed size)
+  const scaleX = mazeCanvas.width  / rect.width;
+  const scaleY = mazeCanvas.height / rect.height;
+  const src    = e.touches ? e.touches[0] : e;
+  return {
+    x: (src.clientX - rect.left) * scaleX,
+    y: (src.clientY - rect.top)  * scaleY,
+  };
+}
+
+/* ═══════════════════════════════════════════
+   WIN CHECK
+═══════════════════════════════════════════ */
+function checkWin() {
+  const { rows, cols } = LEVELS[currentLevel];
+  const last = path[path.length - 1];
+  if (last.row === rows - 1 && last.col === cols - 1) {
+    won = true;
+    drawMaze();
+    setTimeout(() => {
+      winOverlay.classList.add('show');
+      launchConfetti();
+    }, 180);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   EVENT HANDLERS
+═══════════════════════════════════════════ */
+function onDown(e) {
+  if (won) return;
+  e.preventDefault();
+  const { x, y } = getEventPos(e);
+  const cell = pixelToCell(x, y);
+  if (!cell) return;
+
+  // Resume from any cell already in the path (trims back to that point)
+  const existingIdx = path.findIndex(p => p.row === cell.row && p.col === cell.col);
+  if (existingIdx !== -1) {
+    isDrawing = true;
+    path = path.slice(0, existingIdx + 1);
+    drawMaze();
+    return;
+  }
+
+  // Start fresh from the Start cell (top-left, 0,0)
+  if (cell.row === 0 && cell.col === 0) {
+    isDrawing = true;
+    path = [{ row: 0, col: 0 }];
+    drawMaze();
+  }
+}
+
+function onMove(e) {
+  if (!isDrawing || won) return;
+  e.preventDefault();
+
+  const { x, y } = getEventPos(e);
+  const cell = pixelToCell(x, y);
+  if (!cell) return;
+
+  const last = path[path.length - 1];
+
+  // Already on this cell — nothing to do
+  if (cell.row === last.row && cell.col === last.col) return;
+
+  // Check if we stepped back onto a cell already in the path → backtrack
+  const existingIdx = path.findIndex(p => p.row === cell.row && p.col === cell.col);
+  if (existingIdx !== -1) {
+    path = path.slice(0, existingIdx + 1);
+    drawMaze();
+    return;
+  }
+
+  // Check if the adjacent corridor is open
+  if (canPass(last.row, last.col, cell.row, cell.col)) {
+    path.push({ row: cell.row, col: cell.col });
+    checkWin();
+    if (!won) drawMaze();
+  }
+}
+
+function onUp() {
+  isDrawing = false;
+}
+
+mazeCanvas.addEventListener('mousedown',  onDown);
+mazeCanvas.addEventListener('mousemove',  onMove);
+mazeCanvas.addEventListener('mouseup',    onUp);
+mazeCanvas.addEventListener('mouseleave', onUp);
+mazeCanvas.addEventListener('touchstart', onDown, { passive: false });
+mazeCanvas.addEventListener('touchmove',  onMove, { passive: false });
+mazeCanvas.addEventListener('touchend',   onUp);
+mazeCanvas.addEventListener('touchcancel',onUp);
+
+/* ═══════════════════════════════════════════
+   CONFETTI
+═══════════════════════════════════════════ */
+let confettiParticles = [];
+let confettiRAF       = null;
+
+function launchConfetti() {
+  confettiCanvas.width  = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+
+  confettiParticles = Array.from({ length: 160 }, () => ({
+    x:     Math.random() * confettiCanvas.width,
+    y:     -30 - Math.random() * confettiCanvas.height * 0.4,
+    vx:    (Math.random() - 0.5) * 5,
+    vy:    2.5 + Math.random() * 4.5,
+    rot:   Math.random() * Math.PI * 2,
+    rotV:  (Math.random() - 0.5) * 0.18,
+    w:     7 + Math.random() * 11,
+    h:     4 + Math.random() * 8,
+    color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+    alpha: 1,
+  }));
+
+  const deadline = performance.now() + 4200;
+
+  function frame(now) {
+    cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    const remaining = deadline - now;
+
+    for (const p of confettiParticles) {
+      p.x   += p.vx;
+      p.y   += p.vy;
+      p.rot += p.rotV;
+      p.vy  += 0.08; // gravity
+
+      // Fade out in the last second
+      if (remaining < 1000) p.alpha = Math.max(0, remaining / 1000);
+
+      cctx.save();
+      cctx.globalAlpha = p.alpha;
+      cctx.translate(p.x, p.y);
+      cctx.rotate(p.rot);
+      cctx.fillStyle = p.color;
+      cctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      cctx.restore();
+    }
+
+    if (now < deadline) {
+      confettiRAF = requestAnimationFrame(frame);
+    } else {
+      cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    }
+  }
+
+  if (confettiRAF) cancelAnimationFrame(confettiRAF);
+  confettiRAF = requestAnimationFrame(frame);
+}
+
+function stopConfetti() {
+  if (confettiRAF) {
+    cancelAnimationFrame(confettiRAF);
+    confettiRAF = null;
+  }
+  cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+}
+
+/* ═══════════════════════════════════════════
+   CONTROLS
+═══════════════════════════════════════════ */
+function newMaze() {
+  const { rows, cols } = LEVELS[currentLevel];
+  won       = false;
+  path      = [];
+  isDrawing = false;
+  winOverlay.classList.remove('show');
+  stopConfetti();
+  grid = generateMaze(rows, cols);
+  resizeCanvas();
+  drawMaze();
+}
+
+function clearPath() {
+  if (won) return; // don't allow clear after win until new maze
+  path      = [];
+  isDrawing = false;
+  drawMaze();
+}
+
+// Difficulty buttons
+document.querySelectorAll('.btn-diff').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.btn-diff').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentLevel = btn.dataset.level;
+    newMaze();
+  });
+});
+
+document.getElementById('newMazeBtn').addEventListener('click', newMaze);
+document.getElementById('clearBtn').addEventListener('click', clearPath);
+document.getElementById('nextMazeBtn').addEventListener('click', newMaze);
+
+// Reflow on resize
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  drawMaze();
+  if (confettiRAF) {
+    confettiCanvas.width  = window.innerWidth;
+    confettiCanvas.height = window.innerHeight;
+  }
+});
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+newMaze();
+</script>
+</body>
+</html>
