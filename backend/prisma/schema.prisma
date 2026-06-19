@@ -3,16 +3,16 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model Score {
   id         Int      @id @default(autoincrement())
-  name       String
+  name       String   @db.VarChar(20)
   timeMs     Int
-  difficulty String
-  date       String
+  difficulty String   @db.VarChar(10)
+  date       String   @db.VarChar(10)
   createdAt  DateTime @default(now())
 
   @@index([date, difficulty])

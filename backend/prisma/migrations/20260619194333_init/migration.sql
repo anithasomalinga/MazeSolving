@@ -1,11 +1,13 @@
 -- CreateTable
 CREATE TABLE "Score" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "name" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "name" VARCHAR(20) NOT NULL,
     "timeMs" INTEGER NOT NULL,
-    "difficulty" TEXT NOT NULL,
-    "date" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "difficulty" VARCHAR(10) NOT NULL,
+    "date" VARCHAR(10) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Score_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
